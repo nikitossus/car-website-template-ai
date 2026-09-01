@@ -125,6 +125,12 @@ export const CARS: Car[] = [
 
 export const HERO_SLIDES = CARS.slice(0, 3);
 
+// Add the AdobeStock video as an additional source to the first hero slide
+HERO_SLIDES[0].videoSources = [
+  "/AdobeStock_334182422.mp4",
+  ...(HERO_SLIDES[0].videoSources || []),
+];
+
 export type Interior = {
   id: string;
   model: string;
