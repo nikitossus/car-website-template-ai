@@ -1,0 +1,340 @@
+@import "tailwindcss";
+
+@theme {
+  --color-paper: #ffffff;
+  --color-mist: #f2f6fa;
+  --color-cloud: #e2ebf2;
+  --color-ink: #0a1526;
+  --color-deep: #070f1d;
+  --color-ampere: #0b6bff;
+  --color-volt: #00c2d9;
+  --color-neon: #29e07e;
+  --font-display: "Unbounded", "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Manrope", ui-sans-serif, system-ui, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: clip;
+}
+
+::selection {
+  background: var(--color-volt);
+  color: var(--color-ink);
+}
+
+/* ---------- hero choreography ---------- */
+
+@keyframes carEnter {
+  0% {
+    transform: translateX(75vw) scale(1.02);
+    filter: blur(16px);
+    opacity: 0;
+  }
+  14% {
+    opacity: 1;
+  }
+  55% {
+    filter: blur(5px);
+  }
+  100% {
+    transform: translateX(0) scale(1);
+    filter: blur(0);
+  }
+}
+.car-enter {
+  animation: carEnter 1s cubic-bezier(0.17, 0.84, 0.3, 1) both;
+}
+
+@keyframes carExit {
+  0% {
+    transform: translateX(0) scale(1);
+    filter: blur(0);
+    opacity: 1;
+  }
+  80% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translateX(-85vw) scale(0.99);
+    filter: blur(16px);
+    opacity: 0;
+  }
+}
+.car-exit {
+  animation: carExit 1s cubic-bezier(0.55, 0.06, 0.68, 0.19) both;
+}
+
+@keyframes fadeSwap {
+  from {
+    opacity: 0;
+    transform: translateX(26px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.fade-swap {
+  animation: fadeSwap 0.5s ease both;
+}
+
+@keyframes trailIn {
+  0% {
+    transform: scaleX(0.15);
+    opacity: 0;
+  }
+  18% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: scaleX(1.6);
+    opacity: 0;
+  }
+}
+.trail-in {
+  animation: trailIn 1.05s cubic-bezier(0.17, 0.84, 0.3, 1) both;
+}
+
+@keyframes roadMove {
+  to {
+    transform: translateX(-50%);
+  }
+}
+.road-dash {
+  animation: roadMove 1.4s linear infinite;
+}
+.road-fast {
+  animation-duration: 0.32s;
+}
+
+@keyframes speedline {
+  0% {
+    transform: translateX(55vw);
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(-115vw);
+    opacity: 0;
+  }
+}
+.speedline {
+  animation: speedline 0.8s cubic-bezier(0.3, 0.6, 0.4, 1) both;
+}
+
+/* ---------- generic motion ---------- */
+
+@keyframes riseIn {
+  from {
+    opacity: 0;
+    transform: translateY(26px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.rise {
+  animation: riseIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.anim-fade {
+  animation: fadeIn 0.7s ease both;
+}
+
+@keyframes fillX {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+.fillbar {
+  animation-name: fillX;
+  animation-timing-function: linear;
+  animation-fill-mode: both;
+}
+
+@keyframes drift {
+  from {
+    transform: translate3d(-3%, -2%, 0) scale(1);
+  }
+  to {
+    transform: translate3d(4%, 3%, 0) scale(1.15);
+  }
+}
+.drift-a {
+  animation: drift 22s ease-in-out infinite alternate;
+}
+.drift-b {
+  animation: drift 27s ease-in-out infinite alternate-reverse;
+}
+
+@keyframes marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+.marquee-track {
+  animation: marquee 32s linear infinite;
+}
+.marquee-track:hover {
+  animation-play-state: paused;
+}
+
+@keyframes kenburns {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.12) translate(1.2%, -1.2%);
+  }
+}
+.kenburns {
+  animation: kenburns 16s ease-in-out infinite alternate;
+}
+
+@keyframes pulseDot {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(41, 224, 126, 0.55);
+  }
+  55% {
+    box-shadow: 0 0 0 7px rgba(41, 224, 126, 0);
+  }
+}
+.pulse-dot {
+  animation: pulseDot 2.2s ease-out infinite;
+}
+
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: scale(0.94) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.pop-in {
+  animation: popIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes spinSlow {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.spin-slow {
+  animation: spinSlow 48s linear infinite;
+}
+
+@keyframes cueDrop {
+  0% {
+    transform: translateY(-120%);
+    opacity: 0;
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(300%);
+    opacity: 0;
+  }
+}
+.cue-dot {
+  animation: cueDrop 1.9s cubic-bezier(0.45, 0, 0.45, 1) infinite;
+}
+
+@keyframes dashDraw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.check-circle {
+  stroke-dasharray: 200;
+  stroke-dashoffset: 200;
+  animation: dashDraw 0.8s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+}
+.check-path {
+  stroke-dasharray: 60;
+  stroke-dashoffset: 60;
+  animation: dashDraw 0.5s 0.55s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+}
+
+.ghost-num {
+  color: transparent;
+  -webkit-text-stroke: 1.5px #c5d5e3;
+}
+
+/* ---------- scroll reveal ---------- */
+
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition:
+    opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.reveal.in {
+  opacity: 1;
+  transform: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* ---------- reduced motion ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.15s !important;
+  }
+  .reveal {
+    opacity: 1;
+    transform: none;
+  }
+  .marquee-track {
+    animation: none !important;
+  }
+  .kenburns,
+  .spin-slow,
+  .drift-a,
+  .drift-b,
+  .pulse-dot,
+  .cue-dot {
+    animation: none !important;
+  }
+}
