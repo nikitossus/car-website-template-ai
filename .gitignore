@@ -1,54 +1,43 @@
 ```
-# Video files
-*.mp4
+# Dependencies
+node_modules/
+
+# Build artifacts
+dist/
+build/
+*.js
+*.ts
+*.tsx
 
 # Logs and temp files
 *.log
 *.tmp
-*.swp
 
 # Environment
 .env
 .env.local
-.env.*
+*.env.*
 
 # Editors
 .vscode/
 .idea/
 
-# Dependencies
-node_modules/
-.venv/
-venv/
+# Python
 __pycache__/
-.mypy_cache/
-.pytest_cache/
-dist/
-build/
-target/
-.gradle/
-
-# OS generated files
-.DS_Store
-Thumbs.db
-
-# Compiled files
 *.pyc
-*.class
-*.o
-*.exe
-*.dll
-*.so
-*.a
-*.obj
-*.out
+*.pyo
+*.pyd
 
 # Coverage
 coverage/
 htmlcov/
 .coverage
 
-# Compressed files
+# OS
+.DS_Store
+Thumbs.db
+
+# Archives
 *.zip
 *.gz
 *.tar
@@ -67,4 +56,8 @@ htmlcov/
 *.Z
 *.lz
 *.lzo
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.tar.zst
 ```
