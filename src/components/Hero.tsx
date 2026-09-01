@@ -1,89 +1,134 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import { HERO_SLIDES, type Car } from "../data";
 import { usePrefersReducedMotion } from "../ui";
 
 const N = HERO_SLIDES.length;
-const INTERVAL = 6500;
+const INTERVAL = 7000;
+const SWAP_MS = 1150;
+const EASE = "cubic-bezier(0.72, 0, 0.24, 1)";
 
+type Anim = { from: number; to: number; dir: 1 | -1; ready: boolean };
 type Props = { onBook: (model: string) => void };
 
-function CarLayer({ car, animClass }: { car: Car; animClass: string }) {
+/* ---------------- film layer with source fallback ---------------- */
+
+function HeroFilm({ car, active }: { car: Car; active: boolean }) {
+  const [idx, setIdx] = useState(0);
+  const ref = useRef<HTMLVideoElement | null>(null);
+  const sources = car.videoSources ?? [];
+  const exhausted = sources.length === 0 || idx >= sources.length;
+
+  useEffect(() => {
+    const v = ref.current;
+    if (!v) return;
+    if (active) v.play().catch(() => undefined);
+    else v.pause();
+  }, [active, idx, exhausted]);
+
+  if (exhausted) {
+    // graceful fallback: the studio still, slowly breathing
+    return (
+      <img
+        src={car.image}
+        alt=""
+        aria-hidden="true"
+        className="kenburns h-full w-full object-cover"
+      />
+    );
+  }
+
   return (
-    <div className="pointer-events-none absolute inset-x-0 bottom-[19%] z-10 flex justify-end md:bottom-[14%]">
-      <div
-        className={`relative mr-[-6%] w-[96vw] max-w-[880px] sm:mr-[0%] sm:w-[66vw] lg:mr-[3%] lg:w-[52vw] ${animClass}`}
-      >
-        <span
-          className="trail-in absolute left-[90%] top-[50%] h-[3px] w-[42vw] max-w-[540px] origin-left rounded-full"
-          style={{ background: `linear-gradient(90deg, ${car.accent}cc, transparent)` }}
-        />
-        <span
-          className="trail-in absolute left-[90%] top-[63%] h-[2px] w-[28vw] max-w-[380px] origin-left rounded-full"
-          style={{
-            background: `linear-gradient(90deg, ${car.accent}88, transparent)`,
-            animationDelay: "90ms",
-          }}
-        />
-        <img
-          src={car.image}
-          alt={`${car.name} — ${car.type}, three-quarter front view in motion`}
-          draggable={false}
-          className="relative z-10 w-full select-none mix-blend-multiply"
-        />
-        <span
-          className="absolute bottom-[2%] left-[10%] right-[6%] z-0 h-[9%] rounded-[100%] blur-[8px]"
-          style={{
-            background:
-              "radial-gradient(50% 50% at 50% 50%, rgba(10,21,38,0.28), transparent 70%)",
-          }}
-          aria-hidden="true"
-        />
-      </div>
+    <video
+      key={idx}
+      ref={ref}
+      src={sources[idx]}
+      onError={() => setIdx((i) => i + 1)}
+      muted
+      loop
+      playsInline
+      preload="auto"
+      disablePictureInPicture
+      className="h-full w-full object-cover"
+    />
+  );
+}
+
+/* ---------------- slide stage ---------------- */
+
+function SlideLayer({
+  car,
+  style,
+  active,
+}: {
+  car: Car;
+  style: CSSProperties;
+  active: boolean;
+}) {
+  return (
+    <div className="absolute inset-0 overflow-hidden bg-deep" style={style} aria-hidden={!active}>
+      <HeroFilm car={car} active={active} />
     </div>
   );
 }
 
 export default function Hero({ onBook }: Props) {
   const [index, setIndex] = useState(0);
-  const [prev, setPrev] = useState<number | null>(null);
-  const [zoom, setZoom] = useState(false);
+  const [anim, setAnim] = useState<Anim | null>(null);
   const [paused, setPaused] = useState(false);
   const reduced = usePrefersReducedMotion();
 
   const indexRef = useRef(0);
-  const timeoutRef = useRef(0);
+  const animRef = useRef<Anim | null>(null);
+  const timers = useRef<number[]>([]);
   useEffect(() => {
     indexRef.current = index;
   }, [index]);
-  useEffect(() => () => window.clearTimeout(timeoutRef.current), []);
+  useEffect(() => {
+    animRef.current = anim;
+  }, [anim]);
+  useEffect(
+    () => () => timers.current.forEach((t) => window.clearTimeout(t)),
+    [],
+  );
 
+  /* The video trick: current film drives off one side while the next
+     arrives from the opposite side — both keep rolling during the pass. */
   const goTo = useCallback(
-    (n: number) => {
+    (n: number, dirHint?: 1 | -1) => {
       const cur = indexRef.current;
-      if (n === cur) return;
-      setPrev(cur);
-      setIndex(n);
-      setZoom(true);
-      window.clearTimeout(timeoutRef.current);
-      timeoutRef.current = window.setTimeout(
-        () => {
-          setZoom(false);
-          setPrev(null);
-        },
-        reduced ? 60 : 1050,
+      if (animRef.current || n === cur) return;
+      const dir: 1 | -1 = dirHint ?? (n > cur ? 1 : -1);
+      setAnim({ from: cur, to: n, dir, ready: false });
+      timers.current.push(
+        window.setTimeout(() => setAnim((a) => (a ? { ...a, ready: true } : a)), 30),
+      );
+      timers.current.push(
+        window.setTimeout(
+          () => {
+            setIndex(n);
+            setAnim(null);
+          },
+          reduced ? 650 : SWAP_MS + 40,
+        ),
       );
     },
     [reduced],
   );
 
-  const goNext = useCallback(() => goTo((indexRef.current + 1) % N), [goTo]);
-  const goPrev = useCallback(() => goTo((indexRef.current - 1 + N) % N), [goTo]);
+  const goNext = useCallback(() => goTo((indexRef.current + 1) % N, 1), [goTo]);
+  const goPrev = useCallback(() => goTo((indexRef.current - 1 + N) % N, -1), [goTo]);
 
   useEffect(() => {
-    if (reduced || paused) return;
+    if (reduced || paused || anim) return;
     const id = window.setInterval(goNext, INTERVAL);
     return () => window.clearInterval(id);
-  }, [reduced, paused, index, goNext]);
+  }, [reduced, paused, anim, index, goNext]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -94,86 +139,91 @@ export default function Hero({ onBook }: Props) {
     return () => window.removeEventListener("keydown", onKey);
   }, [goNext, goPrev]);
 
+  const layerStyle = (i: number): CSSProperties => {
+    if (!anim) {
+      return i === index
+        ? { transform: "none", opacity: 1, zIndex: 2 }
+        : { transform: "translateX(101%)", opacity: 0, zIndex: 0, transition: "none" };
+    }
+    if (i === anim.from) {
+      const off = anim.dir === 1 ? "-101%" : "101%";
+      return {
+        transform: anim.ready ? `translateX(${off})` : "translateX(0)",
+        filter: anim.ready ? "blur(6px)" : "blur(0)",
+        opacity: 1,
+        zIndex: 2,
+        transition: anim.ready
+          ? `transform ${SWAP_MS}ms ${EASE}, filter ${SWAP_MS}ms ${EASE}`
+          : "none",
+        willChange: "transform, filter",
+      };
+    }
+    if (i === anim.to) {
+      const off = anim.dir === 1 ? "101%" : "-101%";
+      return reduced
+        ? { transform: "none", opacity: anim.ready ? 1 : 0, zIndex: 3, transition: anim.ready ? "opacity 600ms ease" : "none" }
+        : {
+            transform: anim.ready ? "translateX(0)" : `translateX(${off})`,
+            opacity: 1,
+            zIndex: 3,
+            transition: anim.ready ? `transform ${SWAP_MS}ms ${EASE}` : "none",
+            willChange: "transform",
+          };
+    }
+    return { transform: "translateX(101%)", opacity: 0, zIndex: 0, transition: "none" };
+  };
+
   const car = HERO_SLIDES[index];
+  const swapping = anim !== null && anim.ready && !reduced;
 
   return (
     <section
       id="top"
-      className="relative h-[100svh] min-h-[680px] overflow-hidden bg-mist"
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
+      className="relative h-[100svh] min-h-[640px] overflow-hidden bg-deep"
       aria-label="Featured vehicles"
     >
-      {/* ambient base */}
-      <div className="absolute inset-0 bg-gradient-to-b from-white via-mist to-cloud/70" aria-hidden="true" />
-      <div
-        className="drift-a absolute -left-[10%] top-[-12%] h-[58vmin] w-[58vmin] rounded-full opacity-60 blur-3xl"
-        style={{ background: "radial-gradient(circle at 40% 40%, rgba(0,194,217,0.2), transparent 65%)" }}
-        aria-hidden="true"
-      />
-      <div
-        className="drift-b absolute right-[-8%] top-[4%] h-[62vmin] w-[62vmin] rounded-full opacity-60 blur-3xl"
-        style={{ background: "radial-gradient(circle at 60% 40%, rgba(11,107,255,0.16), transparent 65%)" }}
-        aria-hidden="true"
-      />
-      <div
-        className="absolute inset-x-0 bottom-0 h-[52%]"
-        style={{
-          backgroundImage:
-            "linear-gradient(rgba(148,170,190,0.22) 1px, transparent 1px), linear-gradient(90deg, rgba(148,170,190,0.22) 1px, transparent 1px)",
-          backgroundSize: "72px 72px",
-          maskImage: "linear-gradient(to top, rgba(0,0,0,0.45), transparent)",
-          WebkitMaskImage: "linear-gradient(to top, rgba(0,0,0,0.45), transparent)",
-        }}
-        aria-hidden="true"
-      />
-      {/* per-slide accent tint — the "morph" between models */}
+      {/* film stack */}
+      {HERO_SLIDES.map((s, i) => (
+        <SlideLayer
+          key={s.id}
+          car={s}
+          active={anim ? i === anim.to || i === anim.from : i === index}
+          style={layerStyle(i)}
+        />
+      ))}
+
+      {/* readability gradients */}
+      <div className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-r from-deep/85 via-deep/40 to-deep/5" aria-hidden="true" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-44 bg-gradient-to-t from-deep/80 to-transparent" aria-hidden="true" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-28 bg-gradient-to-b from-deep/60 to-transparent" aria-hidden="true" />
+      {/* per-model accent wash — the morph between films */}
       <div
         key={`tint-${index}`}
-        className="anim-fade absolute inset-0"
-        style={{ background: `radial-gradient(58% 46% at 70% 42%, ${car.accent}21, transparent 70%)` }}
+        className="anim-fade pointer-events-none absolute inset-0 z-10"
+        style={{ background: `radial-gradient(52% 44% at 74% 40%, ${car.accent}24, transparent 70%)` }}
         aria-hidden="true"
       />
 
-      {/* road */}
-      <div className="absolute inset-x-0 bottom-[13%] md:bottom-[15%]" aria-hidden="true">
-        <div className="h-px bg-gradient-to-r from-transparent via-[#b6c8d6] to-transparent" />
-        <div className="relative mt-3 h-[3px] overflow-hidden opacity-80">
-          <div
-            className={`road-dash h-full w-[200%] ${zoom && !reduced ? "road-fast" : ""}`}
-            style={{
-              backgroundImage:
-                "repeating-linear-gradient(90deg, #afc3d2 0 46px, transparent 46px 110px)",
-            }}
-          />
-        </div>
-        <div className="h-24 bg-gradient-to-b from-[#e7eef4]/90 to-transparent" />
-      </div>
-
-      {/* ghost slide numeral */}
+      {/* ghost numeral */}
       <div
         key={`num-${index}`}
-        className="ghost-num rise pointer-events-none absolute right-[2%] top-[12%] z-0 hidden select-none font-display text-[clamp(7rem,16vw,15rem)] font-extrabold leading-none md:block"
+        className="rise pointer-events-none absolute right-[2%] top-[13%] z-10 hidden select-none font-display text-[clamp(7rem,15vw,14rem)] font-extrabold leading-none text-white/[0.07] md:block"
         aria-hidden="true"
       >
         {String(index + 1).padStart(2, "0")}
       </div>
 
-      <div
-        className="spin-slow pointer-events-none absolute bottom-[5%] right-[3%] hidden size-[52vmin] rounded-full border border-dashed border-[#c7d6e4] opacity-70 lg:block"
-        aria-hidden="true"
-      />
-
-      {/* speed streaks during the drive-by */}
-      {zoom && !reduced && (
-        <div className="pointer-events-none absolute inset-0 z-[12]" aria-hidden="true">
-          {[0, 1, 2].map((i) => (
+      {/* speed streaks during the pass */}
+      {swapping && (
+        <div className="pointer-events-none absolute inset-0 z-20" aria-hidden="true">
+          {[0, 1, 2, 3].map((i) => (
             <span
-              key={`sl-${index}-${i}`}
-              className="speedline absolute h-[2px] w-[24vw] rounded-full"
+              key={`sl-${anim.from}-${i}`}
+              className="speedline absolute h-[2px] rounded-full"
               style={{
-                top: `${28 + i * 17}%`,
-                animationDelay: `${i * 90}ms`,
+                top: `${22 + i * 16}%`,
+                width: `${18 + (i % 2) * 10}vw`,
+                animationDelay: `${i * 70}ms`,
                 background: `linear-gradient(90deg, ${car.accent}, transparent)`,
               }}
             />
@@ -181,64 +231,37 @@ export default function Hero({ onBook }: Props) {
         </div>
       )}
 
-      {/* exiting car drives off to the left, entering car cruises in from the right */}
-      {prev !== null && !reduced && (
-        <div key={`out-${prev}`} className="contents">
-          <CarLayer car={HERO_SLIDES[prev]} animClass="car-exit" />
-        </div>
-      )}
-      <div key={`in-${index}`} className="contents">
-        <CarLayer car={car} animClass={reduced ? "fade-swap" : "car-enter"} />
-      </div>
-
       {/* copy */}
-      <div className="absolute left-[5%] top-[16%] z-20 w-[min(90vw,560px)] md:left-[6%] md:top-[19%]">
+      <div className="absolute left-[5%] top-[21%] z-30 w-[min(90vw,600px)] md:left-[6%] md:top-[23%]">
         <div key={`copy-${index}`}>
           <div className="rise flex items-center gap-3">
-            <span
-              className="inline-flex items-center gap-2 rounded-full border bg-white/75 px-4 py-1.5 text-[11px] font-extrabold uppercase tracking-[0.22em] text-slate-600 backdrop-blur-sm"
-              style={{ borderColor: `${car.accent}66` }}
-            >
+            <span className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-4 py-1.5 text-[11px] font-extrabold uppercase tracking-[0.22em] text-white backdrop-blur-md">
               <span className="pulse-dot size-1.5 rounded-full" style={{ background: car.accent }} />
               {car.type}
             </span>
-            <span className="hidden text-xs font-extrabold uppercase tracking-[0.22em] text-slate-400 sm:block">
+            <span className="hidden text-xs font-extrabold uppercase tracking-[0.22em] text-white/60 sm:block">
               {car.name}
             </span>
           </div>
 
           <h1
-            className="rise mt-5 font-display text-[clamp(1.85rem,4.4vw,4rem)] font-bold leading-[1.07] tracking-tight text-ink"
-            style={{ animationDelay: "70ms" }}
+            className="rise mt-5 font-display text-[clamp(1.9rem,4.6vw,4.1rem)] font-bold leading-[1.06] tracking-tight text-white"
+            style={{ animationDelay: "80ms", textShadow: "0 2px 30px rgba(7,15,29,0.45)" }}
           >
             {car.headline}
           </h1>
+
           <p
-            className="rise mt-4 max-w-md text-base font-medium text-slate-500 md:text-lg"
-            style={{ animationDelay: "140ms" }}
+            className="rise mt-4 max-w-md text-base font-medium leading-relaxed text-white/75 md:text-lg"
+            style={{ animationDelay: "160ms" }}
           >
             {car.tagline}
           </p>
 
-          <div className="rise mt-7 flex items-center gap-5 md:gap-7" style={{ animationDelay: "210ms" }}>
-            {[
-              [String(car.range), "km range"],
-              [car.accel, "s · 0–100"],
-              [String(car.top), "km/h top"],
-            ].map(([v, l], i) => (
-              <div key={l} className={i > 0 ? "border-l border-slate-200 pl-5 md:pl-7" : ""}>
-                <div className="font-display text-xl font-bold tabular-nums text-ink md:text-2xl">{v}</div>
-                <div className="mt-0.5 text-[11px] font-extrabold uppercase tracking-[0.18em] text-slate-400">
-                  {l}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="rise mt-8 flex flex-wrap items-center gap-4" style={{ animationDelay: "280ms" }}>
+          <div className="rise mt-8 flex flex-wrap items-center gap-5" style={{ animationDelay: "240ms" }}>
             <button
               onClick={() => onBook(car.name)}
-              className="group inline-flex items-center gap-3 rounded-full bg-ampere px-7 py-3.5 text-sm font-extrabold text-white shadow-[0_14px_34px_-10px_rgba(11,107,255,0.6)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-ink md:text-base"
+              className="group inline-flex items-center gap-3 rounded-full bg-ampere px-8 py-4 text-sm font-extrabold text-white shadow-[0_18px_44px_-12px_rgba(11,107,255,0.75)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-volt hover:text-ink md:text-base"
             >
               Book test drive
               <svg
@@ -256,34 +279,32 @@ export default function Hero({ onBook }: Props) {
             </button>
             <a
               href="#models"
-              className="inline-flex items-center rounded-full border border-slate-300 bg-white/60 px-6 py-3.5 text-sm font-extrabold text-ink backdrop-blur-sm transition-colors duration-300 hover:border-ink md:text-base"
+              className="group inline-flex items-center gap-2 text-sm font-extrabold text-white/85 transition-colors duration-300 hover:text-white md:text-base"
             >
               Explore lineup
+              <span className="h-px w-7 bg-white/40 transition-all duration-300 group-hover:w-10 group-hover:bg-neon" />
             </a>
           </div>
         </div>
       </div>
 
       {/* scroll cue */}
-      <div
-        className="absolute bottom-[12%] left-[5%] z-20 hidden flex-col items-center gap-3 md:flex md:left-[6%]"
-        aria-hidden="true"
-      >
-        <span className="text-[10px] font-extrabold uppercase tracking-[0.34em] text-slate-400 [writing-mode:vertical-rl]">
+      <div className="absolute bottom-[13%] left-[5%] z-30 hidden flex-col items-center gap-3 md:flex md:left-[6%]" aria-hidden="true">
+        <span className="text-[10px] font-extrabold uppercase tracking-[0.34em] text-white/50 [writing-mode:vertical-rl]">
           Scroll
         </span>
-        <span className="relative h-12 w-px overflow-hidden bg-slate-300">
-          <span className="cue-dot absolute left-0 top-0 h-5 w-px rounded-full bg-ampere" />
+        <span className="relative h-12 w-px overflow-hidden bg-white/25">
+          <span className="cue-dot absolute left-0 top-0 h-5 w-px rounded-full bg-volt" />
         </span>
       </div>
 
-      {/* controls */}
-      <div className="absolute inset-x-[5%] bottom-[3.5%] z-30 flex items-center gap-3 md:inset-x-[6%] md:gap-5">
-        <div className="flex items-center gap-1.5 rounded-full border border-white/70 bg-white/70 p-1.5 shadow-[0_12px_34px_-18px_rgba(10,21,38,0.4)] backdrop-blur-md">
+      {/* glass controls */}
+      <div className="absolute inset-x-[5%] bottom-[4%] z-40 flex items-center gap-3 md:inset-x-[6%] md:gap-5">
+        <div className="flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 p-1.5 shadow-[0_16px_44px_-16px_rgba(0,0,0,0.6)] backdrop-blur-xl">
           <button
             onClick={goPrev}
             aria-label="Previous model"
-            className="flex size-10 items-center justify-center rounded-full text-ink transition-all duration-300 hover:bg-ink hover:text-white"
+            className="flex size-10 items-center justify-center rounded-full text-white transition-all duration-300 hover:bg-white hover:text-ink"
           >
             <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M15 6l-6 6 6 6" />
@@ -292,21 +313,22 @@ export default function Hero({ onBook }: Props) {
           <button
             onClick={goNext}
             aria-label="Next model"
-            className="flex size-10 items-center justify-center rounded-full text-ink transition-all duration-300 hover:bg-ink hover:text-white"
+            className="flex size-10 items-center justify-center rounded-full text-white transition-all duration-300 hover:bg-white hover:text-ink"
           >
             <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M9 6l6 6-6 6" />
             </svg>
           </button>
-          <span className="mx-1 hidden h-5 w-px bg-slate-200 sm:block" />
-          <div className="flex items-center gap-2 px-1">
+          <span className="mx-1 hidden h-5 w-px bg-white/20 sm:block" />
+          <div className="flex items-center gap-2 px-1" role="tablist" aria-label="Slides">
             {HERO_SLIDES.map((s, i) => (
               <button
                 key={s.id}
                 onClick={() => goTo(i)}
+                role="tab"
+                aria-selected={i === index}
                 aria-label={`Go to ${s.name}`}
-                aria-current={i === index}
-                className="relative h-[6px] w-12 overflow-hidden rounded-full bg-[#d4dfe8] transition-colors duration-300 hover:bg-[#c3d2de] md:w-16"
+                className="relative h-[6px] w-12 overflow-hidden rounded-full bg-white/25 transition-colors duration-300 hover:bg-white/40 md:w-16"
               >
                 {i === index && (
                   <span
@@ -315,7 +337,7 @@ export default function Hero({ onBook }: Props) {
                     style={{
                       background: s.accent,
                       animationDuration: reduced ? "0.01ms" : `${INTERVAL}ms`,
-                      animationPlayState: paused ? "paused" : "running",
+                      animationPlayState: paused || anim ? "paused" : "running",
                     }}
                   />
                 )}
@@ -326,7 +348,7 @@ export default function Hero({ onBook }: Props) {
             onClick={() => setPaused((p) => !p)}
             aria-label={paused ? "Resume slideshow" : "Pause slideshow"}
             aria-pressed={paused}
-            className="mx-0.5 flex size-8 items-center justify-center rounded-full text-slate-500 transition-colors duration-300 hover:bg-mist hover:text-ink"
+            className="mx-0.5 flex size-8 items-center justify-center rounded-full text-white/70 transition-colors duration-300 hover:bg-white/15 hover:text-white"
           >
             {paused ? (
               <svg viewBox="0 0 24 24" className="size-3.5" fill="currentColor" aria-hidden="true">
@@ -341,13 +363,13 @@ export default function Hero({ onBook }: Props) {
           </button>
         </div>
 
-        <div className="ml-auto hidden items-center gap-3 rounded-full border border-white/70 bg-white/70 px-5 py-2.5 shadow-sm backdrop-blur-md sm:flex">
-          <span className="font-display text-base font-bold tabular-nums text-ink">
+        <div className="ml-auto hidden items-center gap-3 rounded-full border border-white/20 bg-white/10 px-5 py-2.5 backdrop-blur-xl sm:flex">
+          <span className="font-display text-base font-bold tabular-nums text-white">
             0{index + 1}
           </span>
-          <span className="text-xs font-extrabold text-slate-400">/ 0{N}</span>
-          <span className="h-4 w-px bg-slate-200" />
-          <span className="text-xs font-extrabold uppercase tracking-[0.18em] text-slate-500">
+          <span className="text-xs font-extrabold text-white/50">/ 0{N}</span>
+          <span className="h-4 w-px bg-white/20" />
+          <span className="text-xs font-extrabold uppercase tracking-[0.18em] text-white/75">
             {car.name}
           </span>
         </div>

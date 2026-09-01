@@ -11,7 +11,18 @@ export type Car = {
   accent: string;
   chipFg: string;
   image: string;
+  /** Hero films — ordered fallback chain of CDN sources. */
+  videoSources?: string[];
 };
+
+const pexels = (id: number, res: string, fps: number) =>
+  `https://videos.pexels.com/video-files/${id}/${id}-${res}_${fps}fps.mp4`;
+
+/** Pexels hosts one fps variant per file; try the likely ones in order. */
+const film = (id: number, fpsGuess: number[]) => [
+  ...fpsGuess.map((f) => pexels(id, "hd_1920_1080", f)),
+  ...fpsGuess.map((f) => pexels(id, "hd_1280_720", f)),
+];
 
 export const CARS: Car[] = [
   {
@@ -29,6 +40,7 @@ export const CARS: Car[] = [
     chipFg: "#0a1526",
     image:
       "https://image.qwenlm.ai/generated-images/20982937-5bcd-447e-8b6b-908e8232cf25/_result.png",
+    videoSources: film(5673623, [30, 25, 24]),
   },
   {
     id: "aeron",
@@ -45,6 +57,7 @@ export const CARS: Car[] = [
     chipFg: "#ffffff",
     image:
       "https://image.qwenlm.ai/generated-images/f98da3d2-8acd-4634-9a08-6718f7518694/_result.png",
+    videoSources: film(5701767, [30, 25, 24]),
   },
   {
     id: "orbit",
@@ -61,6 +74,7 @@ export const CARS: Car[] = [
     chipFg: "#0a1526",
     image:
       "https://image.qwenlm.ai/generated-images/41289008-7cca-40b8-acad-29cbffe4e22d/_result.png",
+    videoSources: film(5309381, [25, 30, 24]),
   },
   {
     id: "nova",

@@ -13,22 +13,32 @@ export default function Nav({ onBook }: { onBook: () => void }) {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  const solid = scrolled || open;
+
   return (
     <header
       className={`fixed inset-x-0 top-0 z-50 transition-all duration-500 ${
-        scrolled
+        solid
           ? "border-b border-cloud bg-white/85 shadow-[0_10px_36px_-22px_rgba(10,21,38,0.35)] backdrop-blur-xl"
-          : "border-b border-white/50 bg-white/30 backdrop-blur-md"
+          : "border-b border-white/10 bg-white/5 backdrop-blur-md"
       }`}
     >
       <div className="mx-auto flex h-16 max-w-[1280px] items-center justify-between gap-4 px-[5%] md:h-[72px] md:px-8">
         <a href="#top" className="group flex items-center gap-3" aria-label="Veloce Motors — home">
           <LogoMark className="size-9 transition-transform duration-300 group-hover:translate-x-0.5" />
           <span className="flex items-baseline gap-2">
-            <span className="font-display text-[17px] font-bold tracking-wide text-ink">
+            <span
+              className={`font-display text-[17px] font-bold tracking-wide transition-colors duration-500 ${
+                solid ? "text-ink" : "text-white"
+              }`}
+            >
               VELOCE
             </span>
-            <span className="hidden text-[9px] font-extrabold uppercase tracking-[0.34em] text-slate-400 sm:block">
+            <span
+              className={`hidden text-[9px] font-extrabold uppercase tracking-[0.34em] transition-colors duration-500 sm:block ${
+                solid ? "text-slate-400" : "text-white/60"
+              }`}
+            >
               Motors
             </span>
           </span>
@@ -39,7 +49,9 @@ export default function Nav({ onBook }: { onBook: () => void }) {
             <a
               key={l.href}
               href={l.href}
-              className="group relative text-sm font-bold text-slate-500 transition-colors duration-300 hover:text-ink"
+              className={`group relative text-sm font-bold transition-colors duration-300 ${
+                solid ? "text-slate-500 hover:text-ink" : "text-white/75 hover:text-white"
+              }`}
             >
               {l.label}
               <span className="absolute -bottom-1.5 inset-x-0 h-[2px] origin-left scale-x-0 rounded-full bg-ampere transition-transform duration-300 group-hover:scale-x-100" />
@@ -50,7 +62,9 @@ export default function Nav({ onBook }: { onBook: () => void }) {
         <div className="flex items-center gap-3">
           <a
             href="tel:+498912004040"
-            className="hidden items-center gap-2 text-sm font-bold text-slate-500 transition-colors hover:text-ink xl:flex"
+            className={`hidden items-center gap-2 text-sm font-bold transition-colors duration-300 xl:flex ${
+              solid ? "text-slate-500 hover:text-ink" : "text-white/75 hover:text-white"
+            }`}
           >
             <svg
               viewBox="0 0 24 24"
@@ -68,7 +82,7 @@ export default function Nav({ onBook }: { onBook: () => void }) {
           </a>
           <button
             onClick={onBook}
-            className="hidden items-center gap-2 rounded-full bg-ampere px-5 py-2.5 text-sm font-extrabold text-white shadow-[0_10px_26px_-10px_rgba(11,107,255,0.65)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-ink sm:inline-flex"
+            className="hidden items-center gap-2 rounded-full bg-ampere px-5 py-2.5 text-sm font-extrabold text-white shadow-[0_10px_26px_-10px_rgba(11,107,255,0.65)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-volt hover:text-ink sm:inline-flex"
           >
             <svg
               viewBox="0 0 24 24"
@@ -88,22 +102,24 @@ export default function Nav({ onBook }: { onBook: () => void }) {
             onClick={() => setOpen((o) => !o)}
             aria-label={open ? "Close menu" : "Open menu"}
             aria-expanded={open}
-            className="flex size-10 flex-col items-center justify-center gap-[5px] rounded-full border border-cloud bg-white/70 lg:hidden"
+            className={`flex size-10 flex-col items-center justify-center gap-[5px] rounded-full border transition-colors duration-300 lg:hidden ${
+              solid ? "border-cloud bg-white/70" : "border-white/25 bg-white/10"
+            }`}
           >
             <span
-              className={`h-[2px] w-4 rounded-full bg-ink transition-all duration-300 ${
-                open ? "translate-y-[7px] rotate-45" : ""
-              }`}
+              className={`h-[2px] w-4 rounded-full transition-all duration-300 ${
+                solid ? "bg-ink" : "bg-white"
+              } ${open ? "translate-y-[7px] rotate-45" : ""}`}
             />
             <span
-              className={`h-[2px] w-4 rounded-full bg-ink transition-all duration-300 ${
-                open ? "opacity-0" : ""
-              }`}
+              className={`h-[2px] w-4 rounded-full transition-all duration-300 ${
+                solid ? "bg-ink" : "bg-white"
+              } ${open ? "opacity-0" : ""}`}
             />
             <span
-              className={`h-[2px] w-4 rounded-full bg-ink transition-all duration-300 ${
-                open ? "-translate-y-[7px] -rotate-45" : ""
-              }`}
+              className={`h-[2px] w-4 rounded-full transition-all duration-300 ${
+                solid ? "bg-ink" : "bg-white"
+              } ${open ? "-translate-y-[7px] -rotate-45" : ""}`}
             />
           </button>
         </div>
@@ -120,7 +136,7 @@ export default function Nav({ onBook }: { onBook: () => void }) {
               key={l.href}
               href={l.href}
               onClick={() => setOpen(false)}
-              className="border-b border-mist py-3.5 text-base font-bold text-ink transition-colors hover:text-ampere"
+              className="border-b border-mist py-3 text-base font-bold text-ink transition-colors hover:text-ampere"
             >
               {l.label}
             </a>
@@ -130,7 +146,7 @@ export default function Nav({ onBook }: { onBook: () => void }) {
               setOpen(false);
               onBook();
             }}
-            className="mt-5 inline-flex items-center justify-center gap-2 rounded-full bg-ampere px-6 py-3.5 text-sm font-extrabold text-white transition-colors hover:bg-ink"
+            className="mt-4 inline-flex items-center justify-center gap-2 rounded-full bg-ampere px-5 py-3 text-sm font-extrabold text-white"
           >
             Book Test Drive
           </button>
